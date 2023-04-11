@@ -31,3 +31,7 @@
 	the player has voluntarily ghosted while still alive - this means that the character won't return back to the round as a player, \
 	short of invervention from an admin. For clarity, these cases will also always mention that the player won't be recovering or waking up any time soon.<br>\
 	The server's rules likely have special clauses regarding SSD players. Check the rule list before you touch a player who's disconnected or take any actions on them."
+
+/datum/codex_entry/blinkmechanic
+	associated_paths = list(/obj/screen/blink)
+	mechanics_text = "Indicates visually how close you are to blinking. You can also delay your blink by spamming your delay blink keybind, which by default is space bar."
