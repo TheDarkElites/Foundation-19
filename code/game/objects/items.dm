@@ -921,8 +921,6 @@ GLOBAL_LIST_EMPTY(items_by_convert_rating)
 GLOBAL_LIST_INIT(items_conversion_blacklist, list(
 	/obj/item/card/id/syndicate/station_access,
 	/obj/item/paper/scp012,
-	/obj/item/photo/scp096,
-	/obj/item/photo/scp096/scp096_photo,
 	/obj/item/storage/backpack/santabag,
 	/obj/item/reagent_containers/glass/beaker/vial/scp008,
 	/obj/item/storage/pill_bottle/scp500,
