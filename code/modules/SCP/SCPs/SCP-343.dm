@@ -13,14 +13,61 @@
 
 	//Config
 
-	///Cooldown for our phasing ability
+	///Cooldown for our phasing wall ability
 	var/phase_cooldown = 5 SECONDS
+	///Cooldown for regular phasing ability
+	var/phase_cooldown_regular = 2 SECONDS
 	///How long it takes us to phase
 	var/phase_time = 2 SECONDS
-	var/move_delay = 3.0
+	///What alpha level are we when we are invisible
+	var/phase_alpha = 20
+	///Move speed when we are phased out
+	var/phased_move_delay = 1.0
+
 	//Mechanical
+
+	///Cooldow tracker for our phasing wall ability
+	var/phase_cooldown_track
+	///Cooldown tracker for our phase ability
+	var/phase_cooldown_track_regular
+	///Our set movespeed
+	var/move_speed_delay
+	///Set Alpha (to know what to phase back to)
+	var/set_alpha
+
+/mob/living/carbon/human/scp343/Initialize(mapload, new_species = "SCP-343")
+	. = ..()
+	SCP = new /datum/scp(
+		src, // Ref to actual SCP atom
+		"strange elderly man", //Name (Should not be the scp desg, more like what it can be described as to viewers)
+		SCP_SAFE, //Obj Class
+		"343", //Numerical Designation
+		SCP_PLAYABLE|SCP_ROLEPLAY
+	)
+
+	add_language(LANGUAGE_ENGLISH)
+	add_language(LANGUAGE_HUMAN_FRENCH)
+	add_language(LANGUAGE_HUMAN_GERMAN)
+	add_language(LANGUAGE_HUMAN_SPANISH)
+	if(!(MUTATION_XRAY in mutations))
+		mutations.Add(MUTATION_XRAY)
+		update_mutations()
+		update_sight()
+
+	add_verb(src, /mob/living/carbon/human/scp343/verb/object_phase)
+	add_verb(src, /mob/living/carbon/human/scp343/verb/phase_in_verb)
+	add_verb(src, /mob/living/carbon/human/scp343/verb/phase_out_verb)
+
+//Mechanics
+
 /mob/living/carbon/human/scp343/verb/object_phase()
-	phase_time = 1 SECOND
+	set name = "Phase Through Object"
+	set category = "SCP"
+	set desc = "Phase through an object in front of you."
+
+	if((world.time - phase_cooldown_track) < phase_cooldown)
+		to_chat(src, SPAN_WARNING("You can't phase again yet."))
+		return
 
 	var/obj/target_object = null
 	for(var/obj/O in get_step(src, dir))
@@ -48,11 +95,14 @@
 		to_chat(src, SPAN_WARNING("\The [target_turf] is preventing us from phasing in that direction."))
 		return
 
+	phase_cooldown_track = world.time
+
 	// Mob effects
 	var/old_layer = layer
 	var/anim_x = 0
 	var/anim_y = 0
 	layer = OBSERVER_LAYER
+	alpha = phase_alpha
 
 	if(dir in list(NORTH, NORTHEAST, NORTHWEST))
 		anim_y = 32
@@ -64,39 +114,50 @@
 		anim_x = -32
 	animate(src, pixel_x = anim_x, pixel_y = anim_y, time = phase_time)
 
-	//if(do_after(src, phase_time, target_object))
-	forceMove(get_step(src, dir))
-	visible_message(SPAN_NOTICE("[src] silently phases through [target_object]"))
+	if(do_after(src, phase_time, target_object))
+		forceMove(get_step(src, dir))
+		visible_message(SPAN_NOTICE("[src] silently phases through [target_object]"))
 
 	layer = old_layer
 	pixel_x = 0
 	pixel_y = 0
-	///Cooldow tracker for our phasing ability
-/mob/living/carbon/human/scp343/Initialize(mapload, new_species = "SCP-343")
-	. = ..()
-	SCP = new /datum/scp(
-		src, // Ref to actual SCP atom
-		"strange elderly man", //Name (Should not be the scp desg, more like what it can be described as to viewers)
-		SCP_SAFE, //Obj Class
-		"343", //Numerical Designation
-		SCP_PLAYABLE|SCP_ROLEPLAY
-	)
+	alpha = set_alpha
 
-	add_language(LANGUAGE_ENGLISH)
-	add_language(LANGUAGE_HUMAN_FRENCH)
-	add_language(LANGUAGE_HUMAN_GERMAN)
-	add_language(LANGUAGE_HUMAN_SPANISH)
-	if(!(MUTATION_XRAY in mutations))
-		mutations.Add(MUTATION_XRAY)
-		update_mutations()
-		update_sight()
+/mob/living/carbon/human/scp343/verb/phase_out_verb()
+	set name = "Phase Out"
+	set category = "SCP"
+	set desc = "Become barley visible and incredibly fast."
 
-	add_verb(src, /mob/living/carbon/human/scp343/verb/object_phase)
+	if (alpha < 255)
+		to_chat(src, SPAN_ALERT("You are already phased out!"))
+		return
 
-	SCP.min_time = 15 MINUTES
-	SCP.min_playercount = 20
+	if((world.time - phase_cooldown_track_regular) < phase_cooldown_regular)
+		to_chat(src, SPAN_WARNING("You can't phase again yet."))
+		return
 
-//Mechanics
+	phase_cooldown_track_regular = world.time
+
+	alpha = phase_alpha
+	set_alpha = phase_alpha
+	move_speed_delay = phased_move_delay
+
+	visible_message(SPAN_NOTICE("[src] silently phases out of exsistence."), SPAN_NOTICE("You phase out of reality."))
+
+/mob/living/carbon/human/scp343/verb/phase_in_verb()
+	set name = "Phase In"
+	set category = "SCP"
+	set desc = "Become synced with reality again."
+
+	if (alpha == 255)
+		to_chat(src, SPAN_ALERT("You are already phased in!"))
+		return
+
+	alpha = 255
+	set_alpha = 255
+	move_speed_delay = 3.0 // Default speed
+
+	visible_message(SPAN_NOTICE("[src] silently phases into exsistence."), SPAN_NOTICE("You phase back into reality."))
 
 //Overrides
 
@@ -124,7 +185,7 @@
 	return 1
 
 /mob/living/carbon/human/scp343/movement_delay(decl/move_intent/using_intent = move_intent)
-	return 3.0
+	return move_speed_delay
 
 //TODO: Change pathing of SCPs to no longer be humans so that we dont have to do this bullshit.
 /mob/living/carbon/human/scp343/update_icons()
@@ -137,23 +198,3 @@
 	else
 		transform = null
 	return
-
-
-/mob/living/carbon/human/scp343/verb/change_shell()
-	set name = "Change shell"
-	set category = "SCP"
-	set desc = "Become unreal"
-
-	// Invisible
-	if (alpha < 255)
-		alpha = 255
-		move_delay = 3.0 // Default speed
-	else if (alpha == 255)
-		alpha = 0
-		move_delay = 1.0 // Max speed
-
-
-	to_chat(src, SPAN_WARNING("You change your visibility."))
-
-/mob/living/carbon/human/scp343/movement_delay()
-	return move_delay
